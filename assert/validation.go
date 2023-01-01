@@ -38,33 +38,33 @@ func Validation(t *testing.T, result any) *v {
 	}
 }
 
-func (v *v) Fieldless(meta any, data ...map[string]any) *v {
-	return v.Field("", meta, data...)
+func (v *v) Fieldless(meta any) *v {
+	return v.Field("", meta)
 }
 
-func (v *v) Field(expectedField string, meta any, data ...map[string]any) *v {
+func (v *v) Field(expectedField string, invalid any) *v {
 	t := v.t
 	t.Helper()
 
-	var expectedData map[string]any
-	if len(data) == 1 {
-		// pass through json so we have the same type as what we'll
-		// be comparing too
-		bytes, err := json.Marshal(data[0])
+	var expectedError map[string]any
+	{
+		bytes, err := json.Marshal(invalid)
 		if err != nil {
 			panic(err)
 		}
-
-		if err := json.Unmarshal(bytes, &expectedData); err != nil {
+		if err := json.Unmarshal(bytes, &expectedError); err != nil {
 			panic(err)
 		}
 	}
-	expectedCode := int(reflect.ValueOf(meta).FieldByName("Code").Uint())
+
+	expectedCode := int(expectedError["code"].(float64))
+	expectedData, _ := expectedError["data"].(map[string]any)
 
 	for _, error := range v.errors {
 		data := error["data"]
 		field := error["field"]
-		if field == nil && expectedField != "" && field.(string) != expectedField {
+
+		if field != expectedField {
 			continue
 		}
 
@@ -89,6 +89,31 @@ func (v *v) Field(expectedField string, meta any, data ...map[string]any) *v {
 	}
 	err += fmt.Sprintf("  code=%d\n", expectedCode)
 	err += fmt.Sprintf("  data=%v\n\n", expectedData)
+	err += fmt.Sprintf("got: %s", string(v.json))
+	t.Error(err)
+	t.FailNow()
+	return v
+}
+
+func (v *v) FieldMessage(expectedField string, expectedMessage string) *v {
+	t := v.t
+	t.Helper()
+
+	for _, error := range v.errors {
+		field := error["field"]
+
+		if field != expectedField {
+			continue
+		}
+		if error["error"].(string) != expectedMessage {
+			continue
+		}
+		return v
+	}
+
+	err := "\nexpected validation error message:\n"
+	err += fmt.Sprintf("  field=%s\n", expectedField)
+	err += fmt.Sprintf("  message=%s\n", expectedMessage)
 	err += fmt.Sprintf("got: %s", string(v.json))
 	t.Error(err)
 	t.FailNow()

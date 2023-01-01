@@ -60,6 +60,11 @@ func (r RequestBuilderT[T]) Body(body any) RequestBuilderT[T] {
 	return r
 }
 
+func (r RequestBuilderT[T]) UserValue(key string, value any) RequestBuilderT[T] {
+	r.rb = r.rb.UserValue(key, value)
+	return r
+}
+
 func (r RequestBuilderT[T]) Host(host string) RequestBuilderT[T] {
 	r.rb = r.rb.Host(host)
 	return r

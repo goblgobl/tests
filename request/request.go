@@ -18,10 +18,11 @@ type Handler func(*fasthttp.RequestCtx)
 
 func Req(t *testing.T) RequestBuilder {
 	return RequestBuilder{
-		t:       t,
-		path:    "/",
-		query:   make(url.Values),
-		headers: make(map[string]string),
+		t:          t,
+		path:       "/",
+		query:      make(url.Values),
+		headers:    make(map[string]string),
+		userValues: make(map[string]any),
 	}
 }
 
@@ -34,13 +35,14 @@ func Response(t *testing.T, res http.Response) response {
 }
 
 type RequestBuilder struct {
-	t       *testing.T
-	host    string
-	body    string
-	path    string
-	method  string
-	query   url.Values
-	headers map[string]string
+	t          *testing.T
+	host       string
+	body       string
+	path       string
+	method     string
+	query      url.Values
+	headers    map[string]string
+	userValues map[string]any
 }
 
 func (r RequestBuilder) Path(path string) RequestBuilder {
@@ -59,7 +61,7 @@ func (r RequestBuilder) Header(key string, value string) RequestBuilder {
 }
 
 func (r RequestBuilder) ProjectId(id string) RequestBuilder {
-	return r.Header("Gobl-Project", id)
+	return r.Header("Project", id)
 }
 
 func (r RequestBuilder) Query(query map[string]string) RequestBuilder {
@@ -79,6 +81,11 @@ func (r RequestBuilder) Body(body any) RequestBuilder {
 		}
 		r.body = string(data)
 	}
+	return r
+}
+
+func (r RequestBuilder) UserValue(key string, value any) RequestBuilder {
+	r.userValues[key] = value
 	return r
 }
 
@@ -133,9 +140,15 @@ func (r RequestBuilder) Conn() *fasthttp.RequestCtx {
 	}
 	request.SetRequestURI(uri)
 
-	return &fasthttp.RequestCtx{
+	ctx := &fasthttp.RequestCtx{
 		Request: *request,
 	}
+
+	for key, value := range r.userValues {
+		ctx.SetUserValue(key, value)
+	}
+
+	return ctx
 }
 
 func Res(t *testing.T, conn *fasthttp.RequestCtx) response {
@@ -188,13 +201,16 @@ type response struct {
 
 func (r response) ExpectCode(expected int) response {
 	r.t.Helper()
-	assert.Equal(r.t, r.Json.Int("code"), expected)
+	actual := r.Json.Int("code")
+	if actual != expected {
+		assert.Fail(r.t, "expected code: %d, got %d\r%s", expected, actual, r.Body)
+	}
 	return r
 }
 
 func (r response) ExpectNotFound(code ...int) response {
 	r.t.Helper()
-	assert.Equal(r.t, r.Status, 404)
+	r.ExpectStatus(404)
 	if len(code) == 1 {
 		r.ExpectCode(code[0])
 	}
@@ -203,7 +219,7 @@ func (r response) ExpectNotFound(code ...int) response {
 
 func (r response) ExpectNotAuthorized(code ...int) response {
 	r.t.Helper()
-	assert.Equal(r.t, r.Status, 401)
+	r.ExpectStatus(401)
 	if len(code) == 1 {
 		r.ExpectCode(code[0])
 	}
@@ -212,9 +228,17 @@ func (r response) ExpectNotAuthorized(code ...int) response {
 
 func (r response) ExpectInvalid(code ...int) response {
 	r.t.Helper()
-	assert.Equal(r.t, r.Status, 400)
+	r.ExpectStatus(400)
 	if len(code) == 1 {
 		r.ExpectCode(code[0])
+	}
+	return r
+}
+
+func (r response) ExpectStatus(expected int) response {
+	r.t.Helper()
+	if r.Status != expected {
+		assert.Fail(r.t, "\nexpected status code: %d\n\t\t got: %d\nbody: %s", expected, r.Status, r.Body)
 	}
 	return r
 }
@@ -230,7 +254,7 @@ func (r response) Inspect() response {
 
 func (r response) ExpectValidation(expected ...any) response {
 	r.t.Helper()
-	assert.Equal(r.t, r.Status, 400)
+	r.ExpectStatus(400)
 	r.ExpectCode(2004)
 
 	valid := true
