@@ -9,6 +9,7 @@ import (
 	"src.goblgobl.com/tests/assert"
 	"src.goblgobl.com/utils/http"
 	"src.goblgobl.com/utils/json"
+	"src.goblgobl.com/utils/log"
 	"src.goblgobl.com/utils/typed"
 
 	"github.com/valyala/fasthttp"
@@ -30,7 +31,7 @@ func Req(t *testing.T) RequestBuilder {
 // to test an http.Response directly
 func Response(t *testing.T, res http.Response) response {
 	conn := &fasthttp.RequestCtx{}
-	res.Write(conn)
+	res.Write(conn, log.Noop{})
 	return Res(t, conn)
 }
 
@@ -64,10 +65,18 @@ func (r RequestBuilder) ProjectId(id string) RequestBuilder {
 	return r.Header("Project", id)
 }
 
-func (r RequestBuilder) Query(query map[string]string) RequestBuilder {
+func (r RequestBuilder) QueryMap(query map[string]string) RequestBuilder {
 	for k, v := range query {
 		r.query.Add(k, v)
 	}
+	return r
+}
+
+func (r RequestBuilder) Query(query ...string) RequestBuilder {
+	for i := 0; i < len(query); i += 2 {
+		r.query.Add(query[i], query[i+1])
+	}
+
 	return r
 }
 

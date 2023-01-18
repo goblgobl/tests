@@ -127,3 +127,17 @@ func Fail(t *testing.T, fmt string, args ...interface{}) {
 	t.Errorf(fmt, args...)
 	t.FailNow()
 }
+
+type Numeric interface {
+	~float32 | ~float64 |
+		~int | ~int8 | ~int16 | ~int32 | ~int64 |
+		~uint | ~uint8 | ~uint16 | ~uint32 | ~uint64 | ~uintptr
+}
+
+func Delta[T Numeric](t *testing.T, actual T, expected T, delta T) {
+	t.Helper()
+	if actual < expected-delta || actual > expected+delta {
+		t.Errorf("\nexpected: '%v'\nto be within %v of equal: '%v'", actual, delta, expected)
+		t.FailNow()
+	}
+}

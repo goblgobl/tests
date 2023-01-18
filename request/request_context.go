@@ -19,6 +19,7 @@ import (
 
 	"github.com/valyala/fasthttp"
 	"src.goblgobl.com/utils/http"
+	"src.goblgobl.com/utils/log"
 )
 
 func ReqT[T any](t *testing.T, env T) RequestBuilderT[T] {
@@ -50,8 +51,13 @@ func (r RequestBuilderT[T]) ProjectId(id string) RequestBuilderT[T] {
 	return r
 }
 
-func (r RequestBuilderT[T]) Query(query map[string]string) RequestBuilderT[T] {
-	r.rb = r.rb.Query(query)
+func (r RequestBuilderT[T]) QueryMap(query map[string]string) RequestBuilderT[T] {
+	r.rb = r.rb.QueryMap(query)
+	return r
+}
+
+func (r RequestBuilderT[T]) Query(query ...string) RequestBuilderT[T] {
+	r.rb = r.rb.Query(query...)
 	return r
 }
 
@@ -90,9 +96,9 @@ func (r RequestBuilderT[T]) Request(handler func(*fasthttp.RequestCtx, T) (http.
 	conn := r.rb.Conn()
 	res, err := handler(conn, r.env)
 	if res != nil {
-		res.Write(conn)
+		res.Write(conn, log.Noop{})
 	} else {
-		http.ServerError().Write(conn)
+		http.ServerError(err).Write(conn, log.Noop{})
 	}
 
 	// r2? really? :dealwithit:
