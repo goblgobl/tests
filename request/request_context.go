@@ -22,11 +22,15 @@ import (
 	"src.goblgobl.com/utils/log"
 )
 
-func ReqT[T any](t *testing.T, env T) RequestBuilderT[T] {
+type Env interface {
+	Request(route string) log.Logger
+}
+
+func ReqT[T Env](t *testing.T, env T) RequestBuilderT[T] {
 	return RequestBuilderT[T]{env, Req(t)}
 }
 
-type RequestBuilderT[T any] struct {
+type RequestBuilderT[T Env] struct {
 	env T
 	rb  RequestBuilder
 }
@@ -94,6 +98,7 @@ func (r RequestBuilderT[T]) Delete(handler func(*fasthttp.RequestCtx, T) (http.R
 
 func (r RequestBuilderT[T]) Request(handler func(*fasthttp.RequestCtx, T) (http.Response, error)) response {
 	conn := r.rb.Conn()
+	r.env.Request("testing")
 	res, err := handler(conn, r.env)
 	if res != nil {
 		res.Write(conn, log.Noop{})
