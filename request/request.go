@@ -1,6 +1,7 @@
 package request
 
 import (
+	"crypto/sha256"
 	"fmt"
 	"net/url"
 	"strings"
@@ -190,6 +191,7 @@ func Res(t *testing.T, conn *fasthttp.RequestCtx) response {
 		t:             t,
 		Json:          json,
 		Headers:       headers,
+		Bytes:         body,
 		Body:          string(body),
 		Status:        status,
 		Validations:   validations,
@@ -201,11 +203,17 @@ type response struct {
 	t             *testing.T
 	Err           error
 	Status        int
+	Bytes         []byte
 	Body          string
 	Json          typed.Typed
 	ContentLength int
 	Headers       map[string]string
 	Validations   map[string][]typed.Typed
+}
+
+func (r response) SHA256() string {
+	sum := sha256.Sum256(r.Bytes)
+	return fmt.Sprintf("%x", sum)
 }
 
 func (r response) ExpectCode(expected int) response {
