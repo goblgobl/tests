@@ -24,6 +24,7 @@ import (
 
 type Env interface {
 	Request(route string) log.Logger
+	ServerError(err error) http.Response
 }
 
 func ReqT[T Env](t *testing.T, env T) RequestBuilderT[T] {
@@ -101,7 +102,7 @@ func (r RequestBuilderT[T]) Request(handler func(*fasthttp.RequestCtx, T) (http.
 	r.env.Request("testing")
 	res, err := handler(conn, r.env)
 	if err != nil {
-		http.ServerError(err).Write(conn, log.Noop{})
+		r.env.ServerError(err).Write(conn, log.Noop{})
 	} else {
 		res.Write(conn, log.Noop{})
 	}
