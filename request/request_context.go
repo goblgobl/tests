@@ -100,10 +100,10 @@ func (r RequestBuilderT[T]) Request(handler func(*fasthttp.RequestCtx, T) (http.
 	conn := r.rb.Conn()
 	r.env.Request("testing")
 	res, err := handler(conn, r.env)
-	if res != nil {
-		res.Write(conn, log.Noop{})
-	} else {
+	if err != nil {
 		http.ServerError(err).Write(conn, log.Noop{})
+	} else {
+		res.Write(conn, log.Noop{})
 	}
 
 	// r2? really? :dealwithit:

@@ -45,20 +45,20 @@ func Rows(db TestableDB, sql string, args ...any) []typed.Typed {
 	return rows
 }
 
-func PG() string {
+func PG(dbName string) string {
 	pg := os.Getenv("GOBL_TEST_PG")
 	if pg == "" {
 		pg = "postgres://localhost:5432"
 	}
-	return pg + "/gobl_test"
+	return pg + "/" + dbName
 }
 
-func CR() string {
+func CR(dbName string) string {
 	cr := os.Getenv("GOBL_TEST_CR")
 	if cr == "" {
 		cr = "postgres://root@localhost:26257"
 	}
-	return cr + "/gobl_test"
+	return cr + "/" + dbName
 }
 
 func StorageType() string {
