@@ -66,6 +66,14 @@ func (r RequestBuilder) ProjectId(id string) RequestBuilder {
 	return r.Header("Project", id)
 }
 
+func (r RequestBuilder) User(id string, role ...string) RequestBuilder {
+	r = r.Header("User", id)
+	if len(role) == 0 {
+		return r
+	}
+	return r.Header("Role", role[0])
+}
+
 func (r RequestBuilder) QueryMap(query map[string]string) RequestBuilder {
 	for k, v := range query {
 		r.query.Add(k, v)
@@ -237,6 +245,15 @@ func (r response) ExpectNotFound(code ...int) response {
 func (r response) ExpectNotAuthorized(code ...int) response {
 	r.t.Helper()
 	r.ExpectStatus(401)
+	if len(code) == 1 {
+		r.ExpectCode(code[0])
+	}
+	return r
+}
+
+func (r response) ExpectForbidden(code ...int) response {
+	r.t.Helper()
+	r.ExpectStatus(403)
 	if len(code) == 1 {
 		r.ExpectCode(code[0])
 	}

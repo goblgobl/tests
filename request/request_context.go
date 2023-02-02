@@ -24,7 +24,7 @@ import (
 
 type Env interface {
 	Request(route string) log.Logger
-	ServerError(err error) http.Response
+	ServerError(err error, conn *fasthttp.RequestCtx) http.Response
 }
 
 func ReqT[T Env](t *testing.T, env T) RequestBuilderT[T] {
@@ -53,6 +53,11 @@ func (r RequestBuilderT[T]) Header(key string, value string) RequestBuilderT[T] 
 
 func (r RequestBuilderT[T]) ProjectId(id string) RequestBuilderT[T] {
 	r.rb = r.rb.ProjectId(id)
+	return r
+}
+
+func (r RequestBuilderT[T]) User(id string, role ...string) RequestBuilderT[T] {
+	r.rb = r.rb.User(id, role...)
 	return r
 }
 
@@ -102,7 +107,7 @@ func (r RequestBuilderT[T]) Request(handler func(*fasthttp.RequestCtx, T) (http.
 	r.env.Request("testing")
 	res, err := handler(conn, r.env)
 	if err != nil {
-		r.env.ServerError(err).Write(conn, log.Noop{})
+		r.env.ServerError(err, conn).Write(conn, log.Noop{})
 	} else {
 		res.Write(conn, log.Noop{})
 	}
