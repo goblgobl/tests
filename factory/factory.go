@@ -5,16 +5,24 @@ A helper to build test factories
 */
 
 import (
+	"fmt"
 	"reflect"
+	"strconv"
 	"strings"
 	"time"
 
+	"src.goblgobl.com/sqlite"
 	"src.goblgobl.com/utils/typed"
 )
 
 type SQLStorage interface {
 	MustExec(sql string, args ...any)
 	Placeholder(i int) string
+}
+
+// Factory where the [sqlite] connection is passed at runtime
+type SQLiteProvider interface {
+	WithDB(func(conn sqlite.Conn))
 }
 
 var DB SQLStorage
@@ -24,7 +32,58 @@ type Table struct {
 	Insert   func(args ...any) typed.Typed
 }
 
+type Sqlite struct {
+	Truncate func(p SQLiteProvider) Sqlite
+	Insert   func(p SQLiteProvider, args ...any) typed.Typed
+}
+
 func NewTable(name string, builder func(KV) KV, pks ...string) Table {
+	keys, insertSQL, deleteSQL := buildSQL(name, builder, DB.Placeholder, pks...)
+
+	t := Table{}
+	t.Truncate = func() Table {
+		DB.MustExec(deleteSQL)
+		return t
+	}
+
+	t.Insert = func(args ...any) typed.Typed {
+		obj := builder(ToKV(args))
+		values := make([]any, len(obj))
+		for i, k := range keys {
+			values[i] = obj[k]
+		}
+		DB.MustExec(insertSQL, values...)
+		return typed.Typed(obj)
+	}
+	return t
+}
+
+func NewSqlite(name string, builder func(KV) KV, pks ...string) Sqlite {
+	keys, insertSQL, deleteSQL := buildSQL(name, builder, sqlitePlaceholderFactory, pks...)
+
+	t := Sqlite{}
+	t.Truncate = func(p SQLiteProvider) Sqlite {
+		p.WithDB(func(conn sqlite.Conn) {
+			conn.MustExec(deleteSQL)
+		})
+		return t
+	}
+
+	t.Insert = func(p SQLiteProvider, args ...any) typed.Typed {
+		obj := builder(ToKV(args))
+		values := make([]any, len(obj))
+		for i, k := range keys {
+			values[i] = obj[k]
+		}
+		p.WithDB(func(conn sqlite.Conn) {
+			conn.MustExec(insertSQL, values...)
+		})
+		return typed.Typed(obj)
+	}
+	return t
+}
+
+func buildSQL(name string, builder func(KV) KV, placeholderFactory func(i int) string, pks ...string) ([]string, string, string) {
 	obj := builder(KV{})
 	keys := make([]string, len(obj))
 	placeholders := make([]string, len(obj))
@@ -32,7 +91,7 @@ func NewTable(name string, builder func(KV) KV, pks ...string) Table {
 	i := 0
 	for k := range obj {
 		keys[i] = k
-		placeholders[i] = DB.Placeholder(i)
+		placeholders[i] = placeholderFactory(i)
 		i++
 	}
 
@@ -48,24 +107,7 @@ func NewTable(name string, builder func(KV) KV, pks ...string) Table {
 
 	deleteSQL := "delete from " + name
 
-	t := Table{}
-
-	t.Truncate = func() Table {
-		DB.MustExec(deleteSQL)
-		return t
-	}
-
-	t.Insert = func(args ...any) typed.Typed {
-		obj := builder(ToKV(args))
-		values := make([]any, len(obj))
-		for i, k := range keys {
-			values[i] = obj[k]
-		}
-		DB.MustExec(insertSQL, values...)
-		return typed.Typed(obj)
-	}
-
-	return t
+	return keys, insertSQL, deleteSQL
 }
 
 type KV map[string]any
@@ -92,6 +134,26 @@ func (kv KV) Int(key string, deflt ...int) any {
 	if value, exists := kv[key]; exists {
 		return value.(int)
 	}
+	if len(deflt) == 1 {
+		return deflt[0]
+	}
+	return nil
+}
+
+func (kv KV) Float(key string, deflt ...float64) any {
+	if value, exists := kv[key]; exists {
+		switch t := value.(type) {
+		case int:
+			return float64(t)
+		case float32:
+			return float64(t)
+		case float64:
+			return t
+		default:
+			panic(fmt.Sprintf("Invalid float64: %t", value))
+		}
+	}
+
 	if len(deflt) == 1 {
 		return deflt[0]
 	}
@@ -143,4 +205,8 @@ func (kv KV) Time(key string, deflt ...time.Time) any {
 		return deflt[0]
 	}
 	return nil
+}
+
+func sqlitePlaceholderFactory(i int) string {
+	return "?" + strconv.Itoa(i+1)
 }
