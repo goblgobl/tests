@@ -5,6 +5,7 @@ A helper to build test factories
 */
 
 import (
+	"encoding/json"
 	"fmt"
 	"reflect"
 	"strconv"
@@ -16,6 +17,7 @@ import (
 )
 
 type SQLStorage interface {
+	JSON(input any) (any, error)
 	MustExec(sql string, args ...any)
 	Placeholder(i int) string
 }
@@ -50,7 +52,15 @@ func NewTable(name string, builder func(KV) KV, pks ...string) Table {
 		obj := builder(ToKV(args))
 		values := make([]any, len(obj))
 		for i, k := range keys {
-			values[i] = obj[k]
+			value := obj[k]
+			if jsonValue, ok := value.(JSON); ok && value != nil {
+				var err error
+				value, err = DB.JSON(jsonValue)
+				if err != nil {
+					panic(err)
+				}
+			}
+			values[i] = value
 		}
 		DB.MustExec(insertSQL, values...)
 		return typed.Typed(obj)
@@ -73,7 +83,16 @@ func NewSqlite(name string, builder func(KV) KV, pks ...string) Sqlite {
 		obj := builder(ToKV(args))
 		values := make([]any, len(obj))
 		for i, k := range keys {
-			values[i] = obj[k]
+			value := obj[k]
+			if jsonValue, ok := value.(JSON); ok && value != nil {
+				var err error
+				value, err = json.Marshal(jsonValue)
+				if err != nil {
+					panic(err)
+				}
+			}
+
+			values[i] = value
 		}
 		p.WithDB(func(conn sqlite.Conn) {
 			conn.MustExec(insertSQL, values...)
@@ -110,6 +129,7 @@ func buildSQL(name string, builder func(KV) KV, placeholderFactory func(i int) s
 	return keys, insertSQL, deleteSQL
 }
 
+type JSON map[string]any
 type KV map[string]any
 
 func ToKV(opts []any) KV {

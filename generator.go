@@ -7,11 +7,14 @@ import (
 	"github.com/google/uuid"
 )
 
-var validChars = []byte("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789[]{}=_!?<>!@#$%^&*() \t\n\r")
+var (
+	Generator  generator
+	validChars = []byte("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789[]{}=_!?<>!@#$%^&*() \t\n\r")
+)
 
-type Generator struct{}
+type generator struct{}
 
-func (_ Generator) UUID() string {
+func (_ generator) UUID() string {
 	return uuid.Must(uuid.NewRandom()).String()
 }
 
@@ -19,7 +22,7 @@ func (_ Generator) UUID() string {
 // No arguments: 0-200 length
 // Single integer: exactly N length
 // Two integers: between A and B lengths
-func (g Generator) String(constraints ...int) string {
+func (g generator) String(constraints ...int) string {
 	switch len(constraints) {
 	case 0:
 		return g.String(rand.Intn(200))
