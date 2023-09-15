@@ -24,7 +24,7 @@ type SQLStorage interface {
 
 // Factory where the [sqlite] connection is passed at runtime
 type SQLiteProvider interface {
-	WithDB(func(conn sqlite.Conn))
+	WithDB(func(conn sqlite.Conn) error) error
 }
 
 var DB SQLStorage
@@ -73,8 +73,9 @@ func NewSqlite(name string, builder func(KV) KV, pks ...string) Sqlite {
 
 	t := Sqlite{}
 	t.Truncate = func(p SQLiteProvider) Sqlite {
-		p.WithDB(func(conn sqlite.Conn) {
+		p.WithDB(func(conn sqlite.Conn) error {
 			conn.MustExec(deleteSQL)
+			return nil
 		})
 		return t
 	}
@@ -94,8 +95,9 @@ func NewSqlite(name string, builder func(KV) KV, pks ...string) Sqlite {
 
 			values[i] = value
 		}
-		p.WithDB(func(conn sqlite.Conn) {
+		p.WithDB(func(conn sqlite.Conn) error {
 			conn.MustExec(insertSQL, values...)
+			return nil
 		})
 		return typed.Typed(obj)
 	}

@@ -13,13 +13,13 @@ import (
 	"testing"
 )
 
-type v struct {
+type V struct {
 	t      *testing.T
 	json   []byte
 	errors []map[string]any
 }
 
-func Validation(t *testing.T, result any) *v {
+func Validation(t *testing.T, result any) *V {
 	e1 := reflect.ValueOf(result).MethodByName("Errors").Call(nil)[0]
 	data, err := json.MarshalIndent(e1.Interface(), "", " ")
 	if err != nil {
@@ -31,14 +31,14 @@ func Validation(t *testing.T, result any) *v {
 		panic(err)
 	}
 
-	return &v{
+	return &V{
 		t:      t,
 		json:   data,
 		errors: e2,
 	}
 }
 
-func (v *v) Fieldless(meta any) *v {
+func (v *V) Fieldless(meta any) *V {
 	return v.Field("", meta)
 }
 
@@ -46,7 +46,7 @@ func (v *v) Fieldless(meta any) *v {
 // a code, e.g. Field("name", 10)
 // a code with data, e.g. Field("name", 10, map[string]any{max: 20})
 // anything else that we'll json serialize and compare with the error, e.g: Field(name, validation.Invalid{Code: 300})
-func (v *v) Field(expectedField string, invalid ...any) *v {
+func (v *V) Field(expectedField string, invalid ...any) *V {
 	t := v.t
 	t.Helper()
 
@@ -111,7 +111,7 @@ func (v *v) Field(expectedField string, invalid ...any) *v {
 	return v
 }
 
-func (v *v) FieldMessage(expectedField string, expectedMessage string) *v {
+func (v *V) FieldMessage(expectedField string, expectedMessage string) *V {
 	t := v.t
 	t.Helper()
 
@@ -136,7 +136,7 @@ func (v *v) FieldMessage(expectedField string, expectedMessage string) *v {
 	return v
 }
 
-func (v *v) FieldsHaveNoErrors(noFields ...string) *v {
+func (v *V) FieldsHaveNoErrors(noFields ...string) *V {
 	t := v.t
 	t.Helper()
 

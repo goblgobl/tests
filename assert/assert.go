@@ -15,7 +15,7 @@ import (
 func Equal[T comparable](t *testing.T, actual T, expected T) {
 	t.Helper()
 	if actual != expected {
-		t.Errorf("\nexpected: '%v'\nto equal: '%v'", actual, expected)
+		t.Errorf("\nexpected: '%v'\nto equal: '%v'", expected, actual)
 		t.FailNow()
 	}
 }
@@ -24,7 +24,7 @@ func Equal[T comparable](t *testing.T, actual T, expected T) {
 func NotEqual[T comparable](t *testing.T, actual T, expected T) {
 	t.Helper()
 	if actual == expected {
-		t.Errorf("\nexpected: '%v'\nto not equal: '%v'", actual, expected)
+		t.Errorf("\nexpected: '%v'\nto not equal: '%v'", expected, actual)
 		t.FailNow()
 	}
 }
@@ -32,7 +32,7 @@ func NotEqual[T comparable](t *testing.T, actual T, expected T) {
 func Bytes(t *testing.T, actual []byte, expected []byte) {
 	t.Helper()
 	if bytes.Compare(actual, expected) != 0 {
-		t.Errorf("\nexpected: '%v'\nto equal: '%v'", actual, expected)
+		t.Errorf("\nexpected: '%v'\nto equal: '%v'", expected, actual)
 		t.FailNow()
 	}
 }

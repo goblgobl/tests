@@ -282,7 +282,15 @@ func (r response) Inspect() response {
 	for k, v := range r.Headers {
 		fmt.Printf("%s = %s\n", k, v)
 	}
-	fmt.Println(r.Body)
+
+	body := r.Body
+	if r.Json != nil {
+		data, err := json.Pretty(r.Json)
+		if err == nil {
+			body = string(data)
+		}
+	}
+	fmt.Println(body)
 	return r
 }
 
