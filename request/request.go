@@ -142,7 +142,7 @@ func (r RequestBuilder) Conn() *fasthttp.RequestCtx {
 	header := new(fasthttp.RequestHeader)
 	header.SetMethod(r.method)
 	for key, value := range r.headers {
-		header.Set(key, value)
+		header.Add(key, value)
 	}
 	request.Header = *header
 
