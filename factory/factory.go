@@ -142,27 +142,27 @@ func ToKV(opts []any) KV {
 	return args
 }
 
-func (kv KV) UUID(key string, deflt ...string) any {
+func (kv KV) UUID(key string, dflt ...string) any {
 	if value, exists := kv[key]; exists {
 		return value.(string)
 	}
-	if len(deflt) == 1 {
-		return deflt[0]
+	if len(dflt) == 1 {
+		return dflt[0]
 	}
 	return nil
 }
 
-func (kv KV) Int(key string, deflt ...int) any {
+func (kv KV) Int(key string, dflt ...int) any {
 	if value, exists := kv[key]; exists {
 		return value.(int)
 	}
-	if len(deflt) == 1 {
-		return deflt[0]
+	if len(dflt) == 1 {
+		return dflt[0]
 	}
 	return nil
 }
 
-func (kv KV) Float(key string, deflt ...float64) any {
+func (kv KV) Float(key string, dflt ...float64) any {
 	if value, exists := kv[key]; exists {
 		switch t := value.(type) {
 		case int:
@@ -176,13 +176,13 @@ func (kv KV) Float(key string, deflt ...float64) any {
 		}
 	}
 
-	if len(deflt) == 1 {
-		return deflt[0]
+	if len(dflt) == 1 {
+		return dflt[0]
 	}
 	return nil
 }
 
-func (kv KV) UInt16(key string, deflt ...uint16) any {
+func (kv KV) UInt16(key string, dflt ...uint16) any {
 	if value, exists := kv[key]; exists {
 		switch v := value.(type) {
 		case int:
@@ -193,40 +193,82 @@ func (kv KV) UInt16(key string, deflt ...uint16) any {
 			return uint16(reflect.ValueOf(value).Uint())
 		}
 	}
-	if len(deflt) == 1 {
-		return deflt[0]
+	if len(dflt) == 1 {
+		return dflt[0]
 	}
 	return nil
 }
 
-func (kv KV) Bool(key string, deflt ...bool) any {
+func (kv KV) Bool(key string, dflt ...bool) any {
 	if value, exists := kv[key]; exists {
 		return value.(bool)
 	}
-	if len(deflt) == 1 {
-		return deflt[0]
+	if len(dflt) == 1 {
+		return dflt[0]
 	}
 	return nil
 }
 
-func (kv KV) String(key string, deflt ...string) any {
+func (kv KV) String(key string, dflt ...string) any {
 	if value, exists := kv[key]; exists {
 		return value.(string)
 	}
-	if len(deflt) == 1 {
-		return deflt[0]
+	if len(dflt) == 1 {
+		return dflt[0]
 	}
 	return nil
 }
 
-func (kv KV) Time(key string, deflt ...time.Time) any {
+func (kv KV) Strings(key string, dflt ...string) any {
+	if value, exists := kv[key]; exists {
+		switch value.(type) {
+		case []string:
+			return value
+		case string:
+			return []string{value.(string)}
+		default:
+			panic("invalid string/[]string value")
+		}
+	}
+	if len(dflt) == 1 {
+		return dflt[0]
+	}
+	return nil
+}
+
+func (kv KV) Time(key string, dflt ...time.Time) any {
 	if value, exists := kv[key]; exists {
 		return value.(time.Time)
 	}
-	if len(deflt) == 1 {
-		return deflt[0]
+	if len(dflt) == 1 {
+		return dflt[0]
 	}
 	return nil
+}
+
+func (kv KV) JSON(key string, dflt map[string]any) any {
+	value, exists := kv[key]
+	if !exists {
+		value = dflt
+	}
+	if value == nil {
+		return nil
+	}
+
+	switch value.(type) {
+	case string:
+		return value
+	case []byte:
+		return value
+	case nil:
+		return nil
+	default:
+		data, err := json.Marshal(value)
+		if err != nil {
+			panic(err)
+		}
+		return data
+	}
 }
 
 func sqlitePlaceholderFactory(i int) string {
