@@ -12,13 +12,14 @@ import (
 	"strings"
 	"time"
 
-	"src.goblgobl.com/sqlite"
+	"src.goblgobl.com/utils/sqlite"
 	"src.goblgobl.com/utils/typed"
 )
 
 type SQLStorage interface {
 	JSON(input any) (any, error)
 	MustExec(sql string, args ...any)
+	RowToMap(sql string, args ...any) (typed.Typed, error)
 	Placeholder(i int) string
 }
 
@@ -62,8 +63,11 @@ func NewTable(name string, builder func(KV) KV, pks ...string) Table {
 			}
 			values[i] = value
 		}
-		DB.MustExec(insertSQL, values...)
-		return typed.Typed(obj)
+		row, err := DB.RowToMap(insertSQL, values...)
+		if err != nil {
+			panic(err)
+		}
+		return row
 	}
 	return t
 }
@@ -95,11 +99,14 @@ func NewSqlite(name string, builder func(KV) KV, pks ...string) Sqlite {
 
 			values[i] = value
 		}
+
+		var r typed.Typed
 		p.WithDB(func(conn sqlite.Conn) error {
-			conn.MustExec(insertSQL, values...)
-			return nil
+			var err error
+			r, err = conn.RowToMap(insertSQL, values...)
+			return err
 		})
-		return typed.Typed(obj)
+		return r
 	}
 	return t
 }
@@ -125,6 +132,7 @@ func buildSQL(name string, builder func(KV) KV, placeholderFactory func(i int) s
 			insertSQL += ", " + k + " = excluded." + k
 		}
 	}
+	insertSQL += " returning *"
 
 	deleteSQL := "delete from " + name
 
