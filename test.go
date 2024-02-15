@@ -48,7 +48,7 @@ func Rows(db TestableDB, sql string, args ...any) []typed.Typed {
 func PG(dbName string) string {
 	pg := os.Getenv("GOBL_TEST_PG")
 	if pg == "" {
-		pg = "postgres://localhost:5432"
+		pg = "postgres://" + dbName + "@localhost:5432"
 	}
 	return pg + "/" + dbName
 }
