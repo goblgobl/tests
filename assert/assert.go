@@ -104,11 +104,25 @@ func Error(t *testing.T, actual error, expected error) {
 	}
 }
 
-func Nowish(t *testing.T, actual time.Time) {
+func Nowish(t *testing.T, actual any, format ...string) {
 	t.Helper()
-	diff := math.Abs(time.Now().UTC().Sub(actual).Seconds())
+
+	var d time.Time
+
+	if len(format) == 1 {
+		var err error
+		d, err = time.Parse(format[0], actual.(string))
+		if err != nil {
+			t.Errorf("date is not a valid format: %s", actual.(string))
+			t.FailNow()
+		}
+	} else {
+		d = actual.(time.Time)
+	}
+
+	diff := math.Abs(time.Now().UTC().Sub(d).Seconds())
 	if diff > 1 {
-		t.Errorf("expected '%s' to be nowish", actual)
+		t.Errorf("expected '%s' to be nowish", d)
 		t.FailNow()
 	}
 }
